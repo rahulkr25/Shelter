@@ -94,7 +94,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
              // the information from each column in this order.
              displayView.setText("The pets table contains " + cursor.getCount() + " pets.\n\n");
              displayView.append(PetEntry._ID + " - " +
-                     PetEntry.COLUMN_PET_NAME +
+                     PetEntry.COLUMN_PET_NAME  +
                      " - "+PetEntry.COLUMN_PET_BREED+
                      " - "+PetEntry.COLUMN_PET_GENDER+
                      " - "+PetEntry.COLUMN_PET_WEIGHT+"\n");
