@@ -16,15 +16,20 @@
  package com.example.shelter;
 
  import android.content.ContentValues;
+ import android.content.CursorLoader;
+ import android.content.DialogInterface;
  import android.content.Intent;
+ import android.content.Loader;
  import android.database.Cursor;
  import android.net.Uri;
  import android.os.Bundle;
  import android.view.Menu;
  import android.view.MenuItem;
  import android.view.View;
+ import android.widget.AdapterView;
  import android.widget.ListView;
 
+ import androidx.appcompat.app.AlertDialog;
  import androidx.appcompat.app.AppCompatActivity;
 
  import com.example.shelter.data.PetContract;
@@ -33,14 +38,9 @@
  /**
   * Displays list of pets that were entered and stored in the app.
   */
- public class MainActivity extends AppCompatActivity {
-
-     @Override
-     protected void onStart() {
-         super.onStart();
-         displayDatabaseInfo();
-
-     }
+ public class MainActivity extends AppCompatActivity implements android.app.LoaderManager.LoaderCallbacks<Cursor> {
+private  static  final int PET_LOADER=0;
+PetCursorAdapter mCursorAdapter;
 
      /** Database helper that will provide us access to the database */
 
@@ -58,10 +58,31 @@
                  startActivity(intent);
              }
          });
+         ListView lvItems = (ListView) findViewById(R.id.list);
+         View emptive=(View)findViewById(R.id.empty_view);
+         lvItems.setEmptyView(emptive);
 
-         displayDatabaseInfo();
+          mCursorAdapter= new PetCursorAdapter(this, null);
+          lvItems.setAdapter(mCursorAdapter);
+
+           //Kickof the loader
+         //getLoaderManager().initLoader(PET_LOADER,null,this);
+         android.app.LoaderManager loaderManager=getLoaderManager();
+         loaderManager.initLoader(PET_LOADER,null,this);
+         lvItems.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+             @Override
+             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                 Uri uri=PetEntry.CONTENT_URI;
+                 uri=Uri.withAppendedPath(uri,String.valueOf(id));
+                 Intent intent=new Intent(MainActivity.this,EditorActivity.class);
+                 intent.setData(uri);
+
+
+                 startActivity(intent);
+             }
+         });
      }
-     private void displayDatabaseInfo() {
+    /* private void displayDatabaseInfo() {
 
           String []projection={PetEntry._ID,
                   PetEntry.COLUMN_PET_NAME,
@@ -70,13 +91,15 @@
                   PetEntry.COLUMN_PET_WEIGHT};
        Cursor cursor=getContentResolver().query(PetEntry.CONTENT_URI,projection,null,null,null);
          ListView lvItems = (ListView) findViewById(R.id.list);
+         View emptive=(View)findViewById(R.id.empty_view);
+         lvItems.setEmptyView(emptive);
 
          PetCursorAdapter petCursorAdapter= new PetCursorAdapter(this, cursor);
 
          lvItems.setAdapter(petCursorAdapter);
 
      }
-
+*/
 
      @Override
      public boolean onCreateOptionsMenu(Menu menu) {
@@ -95,12 +118,38 @@
          values.put(PetEntry.COLUMN_PET_WEIGHT, 7);
          Uri newUri= getContentResolver().insert(PetContract.PetEntry.CONTENT_URI,values);
 
-         displayDatabaseInfo();
+        // displayDatabaseInfo();
+     }
+     void deleteEntry()
+     {
+         getContentResolver().delete(PetEntry.CONTENT_URI,null,null);
      }
      private void deletable()
      {
-         getContentResolver().delete(PetEntry.CONTENT_URI,null,null);
-         displayDatabaseInfo();
+         AlertDialog.Builder builder = new AlertDialog.Builder(this);
+         builder.setMessage("Are you sure to delete all the pets?");
+         builder.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
+             public void onClick(DialogInterface dialog, int id) {
+                 // User clicked the "Delete" button, so delete the pet.
+                 deleteEntry();
+
+             }
+         });
+         builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+             public void onClick(DialogInterface dialog, int id) {
+                 // User clicked the "Cancel" button, so dismiss the dialog
+                 // and continue editing the pet.
+                 if (dialog != null) {
+                     dialog.dismiss();
+                 }
+             }
+         });
+
+         // Create and show the AlertDialog
+         AlertDialog alertDialog = builder.create();
+         alertDialog.show();
+
+
      }
      @Override
      public boolean onOptionsItemSelected(MenuItem item) {
@@ -119,4 +168,27 @@
          }
          return super.onOptionsItemSelected(item);
      }
+
+     @Override
+     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+         String[] projection = {
+                 PetEntry._ID,
+                 PetEntry.COLUMN_PET_NAME,
+                 PetEntry.COLUMN_PET_BREED
+         };
+         return new CursorLoader(this,PetEntry.CONTENT_URI,projection,null,null
+         ,null);
+     }
+
+     @Override
+     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+    mCursorAdapter.swapCursor(data);
+     }
+
+     @Override
+     public void onLoaderReset(Loader<Cursor> loader) {
+    mCursorAdapter.swapCursor(null);
+     }
+
+
  }
