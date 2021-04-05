@@ -16,20 +16,20 @@
  package com.example.shelter;
 
  import android.content.ContentValues;
-import android.content.Intent;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
-import android.widget.TextView;
+ import android.content.Intent;
+ import android.database.Cursor;
+ import android.net.Uri;
+ import android.os.Bundle;
+ import android.view.Menu;
+ import android.view.MenuItem;
+ import android.view.View;
+ import android.widget.ListView;
 
-import androidx.appcompat.app.AppCompatActivity;
+ import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.shelter.data.PetContract.PetEntry;
-import com.example.shelter.data.PetDbHelper;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+ import com.example.shelter.data.PetContract;
+ import com.example.shelter.data.PetContract.PetEntry;
+ import com.google.android.material.floatingactionbutton.FloatingActionButton;
  /**
   * Displays list of pets that were entered and stored in the app.
   */
@@ -62,71 +62,19 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
          displayDatabaseInfo();
      }
      private void displayDatabaseInfo() {
-         // To access our database, we instantiate our subclass of SQLiteOpenHelper
-         // and pass the context, which is the current activity.
-         PetDbHelper mDbHelper = new PetDbHelper(this);
 
-         // Create and/or open a database to read from it
-         SQLiteDatabase db = mDbHelper.getReadableDatabase();
           String []projection={PetEntry._ID,
                   PetEntry.COLUMN_PET_NAME,
                   PetEntry.COLUMN_PET_BREED,
                   PetEntry.COLUMN_PET_GENDER,
                   PetEntry.COLUMN_PET_WEIGHT};
-         // Perform this raw SQL query "SELECT * FROM pets"
-         // to get a Cursor that contains all rows from the pets table.
-         //Cursor cursor = db.rawQuery("SELECT * FROM " + PetEntry.TABLE_NAME, null);
-         Cursor cursor=db.query(PetEntry.TABLE_NAME,
-                 projection,
-                 null,
-                 null,
-                 null,
-                 null,
-                 null);
-         TextView displayView = (TextView) findViewById(R.id.text_view_pet);
-         try {
-             // Create a header in the Text View that looks like this:
-             //
-             // The pets table contains <number of rows in Cursor> pets.
-             // _id - name - breed - gender - weight
-             //
-             // In the while loop below, iterate through the rows of the cursor and display
-             // the information from each column in this order.
-             displayView.setText("The pets table contains " + cursor.getCount() + " pets.\n\n");
-             displayView.append(PetEntry._ID + " - " +
-                     PetEntry.COLUMN_PET_NAME  +
-                     " - "+PetEntry.COLUMN_PET_BREED+
-                     " - "+PetEntry.COLUMN_PET_GENDER+
-                     " - "+PetEntry.COLUMN_PET_WEIGHT+"\n");
+       Cursor cursor=getContentResolver().query(PetEntry.CONTENT_URI,projection,null,null,null);
+         ListView lvItems = (ListView) findViewById(R.id.list);
 
-             // Figure out the index of each column
-             int idColumnIndex = cursor.getColumnIndex(PetEntry._ID);
-             int nameColumnIndex = cursor.getColumnIndex(PetEntry.COLUMN_PET_NAME);
-             int breedColumnIndex = cursor.getColumnIndex(PetEntry.COLUMN_PET_BREED);
-             int genderColumnIndex = cursor.getColumnIndex(PetEntry.COLUMN_PET_GENDER);
-             int weightColumnIndex = cursor.getColumnIndex(PetEntry.COLUMN_PET_WEIGHT);
+         PetCursorAdapter petCursorAdapter= new PetCursorAdapter(this, cursor);
 
+         lvItems.setAdapter(petCursorAdapter);
 
-
-             // Iterate through all the returned rows in the cursor
-             while (cursor.moveToNext()) {
-                 // Use that index to extract the String or Int value of the word
-                 // at the current row the cursor is on.
-                 int currentID = cursor.getInt(idColumnIndex);
-                 String currentName = cursor.getString(nameColumnIndex);
-                 String currentBreed=cursor.getString(breedColumnIndex);
-                 int currentGender=cursor.getInt(genderColumnIndex);
-                 int currentWeight=cursor.getInt(weightColumnIndex);
-
-                 // Display the values from each column of the current row in the cursor in the TextView
-                 displayView.append(("\n" + currentID + " - " +
-                         currentName+ " - " +currentBreed+ " - " +currentGender+ " - "+currentWeight));
-             }
-         } finally {
-             // Always close the cursor when you're done reading from it. This releases all its
-             // resources and makes it invalid.
-             cursor.close();
-         }
      }
 
 
@@ -139,14 +87,19 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
      }
      private  void insertPet() {
          // TODO: Insert a single pet into the database
-         PetDbHelper mDbHelper = new PetDbHelper(this);
-         SQLiteDatabase db = mDbHelper.getWritableDatabase();
+
          ContentValues values = new ContentValues();
          values.put(PetEntry.COLUMN_PET_NAME, "Garfield");
          values.put(PetEntry.COLUMN_PET_BREED, "Tabby");
          values.put(PetEntry.COLUMN_PET_GENDER, PetEntry.GENDER_MALE);
          values.put(PetEntry.COLUMN_PET_WEIGHT, 7);
-         db.insert(PetEntry.TABLE_NAME, null, values);
+         Uri newUri= getContentResolver().insert(PetContract.PetEntry.CONTENT_URI,values);
+
+         displayDatabaseInfo();
+     }
+     private void deletable()
+     {
+         getContentResolver().delete(PetEntry.CONTENT_URI,null,null);
          displayDatabaseInfo();
      }
      @Override
@@ -160,6 +113,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
                  return true;
              // Respond to a click on the "Delete all entries" menu option
              case R.id.action_delete_all_entries:
+                 deletable();
                  // Do nothing for now
                  return true;
          }
